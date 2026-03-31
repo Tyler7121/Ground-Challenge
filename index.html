@@ -1,3 +1,6 @@
+Index · HTML
+Copy
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -29,6 +32,7 @@
   .pts-1 { background: #f0ede6; color: #888; }
   .pts-2 { background: #e1f5ee; color: #0f6e56; }
   .pts-3 { background: #faeeda; color: #854f0b; }
+  .pts-5 { background: #e6f1fb; color: #185fa5; }
   button.primary {
     width: 100%; padding: 11px; background: #1a1a1a; color: #fff; border: none; border-radius: 8px;
     font-size: 15px; font-weight: 500; font-family: inherit; cursor: pointer; transition: opacity 0.15s;
@@ -68,14 +72,14 @@
 </style>
 </head>
 <body>
-
+ 
 <div class="header">
   <span style="font-size:22px">🔥</span>
   <h1>Ground Fitness Challenge</h1>
 </div>
-
+ 
 <div class="container">
-
+ 
   <div class="stats-row">
     <div class="stat-card">
       <div class="stat-label">Total points</div>
@@ -90,13 +94,14 @@
       <div class="stat-value" id="total-participants">0</div>
     </div>
   </div>
-
+ 
   <div class="card">
     <h2>Log your reps</h2>
     <div class="scoring-legend">
       <div class="legend-item"><span class="point-badge pts-1">1 pt</span> Push-ups &amp; Sit-ups</div>
       <div class="legend-item"><span class="point-badge pts-2">2 pts</span> Squats</div>
       <div class="legend-item"><span class="point-badge pts-3">3 pts</span> Burpees</div>
+      <div class="legend-item"><span class="point-badge pts-5">5 pts</span> per KM run/walked</div>
     </div>
     <div class="form-name">
       <input type="text" id="input-name" placeholder="Your name" autocomplete="off" />
@@ -118,16 +123,20 @@
         <div class="label-row"><label>Burpees</label><span class="point-badge pts-3">3 pts</span></div>
         <input type="number" id="ex-burpees" placeholder="0" min="0" max="9999" />
       </div>
+      <div class="exercise-input">
+        <div class="label-row"><label>Run / Walk (KM)</label><span class="point-badge pts-5">5 pts/km</span></div>
+        <input type="number" id="ex-km" placeholder="0.0" min="0" max="999" step="0.1" />
+      </div>
     </div>
     <button class="primary" onclick="logReps()">Log reps</button>
     <div class="toast" id="toast"></div>
   </div>
-
+ 
   <div class="card">
     <h2>Leaderboard — points</h2>
     <div id="leaderboard"><div class="empty">No reps logged yet — be the first!</div></div>
   </div>
-
+ 
   <div class="card slack-section">
     <h2>Slack setup</h2>
     <label>Webhook URL</label>
@@ -139,19 +148,20 @@
     <div class="toast" id="slack-toast"></div>
     <div class="schedule-info">Daily leaderboard posts automatically at <strong>8:00 AM EST</strong> while this tab is open.</div>
   </div>
-
+ 
 </div>
-
+ 
 <script>
 const STORAGE_KEY = 'ground_challenge_v3';
 const WEBHOOK_KEY = 'ground_webhook_v1';
 const EXERCISES = [
-  { id: 'pushups', label: 'Push-ups',    emoji: '💪', pts: 1 },
-  { id: 'situps',  label: 'Sit-ups',     emoji: '🔥', pts: 1 },
-  { id: 'squats',  label: 'Body squats', emoji: '🦵', pts: 2 },
-  { id: 'burpees', label: 'Burpees',     emoji: '⚡', pts: 3 },
+  { id: 'pushups', label: 'Push-ups',    emoji: '💪', pts: 1,  unit: 'reps' },
+  { id: 'situps',  label: 'Sit-ups',     emoji: '🔥', pts: 1,  unit: 'reps' },
+  { id: 'squats',  label: 'Body squats', emoji: '🦵', pts: 2,  unit: 'reps' },
+  { id: 'burpees', label: 'Burpees',     emoji: '⚡', pts: 3,  unit: 'reps' },
+  { id: 'km',      label: 'Run/Walk',    emoji: '🏃', pts: 5,  unit: 'km'   },
 ];
-
+ 
 function getData() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; }
 }
@@ -160,33 +170,36 @@ function getInitials(name) {
   return name.trim().split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 }
 function scoreFor(exData) {
-  return EXERCISES.reduce((s, ex) => s + (exData[ex.id] || 0) * ex.pts, 0);
+  return Math.round(EXERCISES.reduce((s, ex) => s + (exData[ex.id] || 0) * ex.pts, 0));
 }
 function totalRepsFor(exData) {
-  return EXERCISES.reduce((s, ex) => s + (exData[ex.id] || 0), 0);
+  const reps = EXERCISES.filter(ex => ex.unit === 'reps').reduce((s, ex) => s + (exData[ex.id] || 0), 0);
+  const km = exData['km'] || 0;
+  return `${reps} reps${km > 0 ? ` · ${km}km` : ''}`;
 }
-
+ 
 function renderLeaderboard() {
   const data = getData();
   const entries = Object.entries(data)
     .map(([name, exData]) => ({ name, exData, score: scoreFor(exData), reps: totalRepsFor(exData) }))
     .sort((a, b) => b.score - a.score);
-
+ 
   const grandPts  = entries.reduce((s, e) => s + e.score, 0);
-  const grandReps = entries.reduce((s, e) => s + e.reps,  0);
+  const grandReps = entries.reduce((s, e) => s + EXERCISES.filter(ex => ex.unit === 'reps').reduce((r, ex) => r + (e.exData[ex.id] || 0), 0), 0);
+  const grandKm   = entries.reduce((s, e) => s + (e.exData['km'] || 0), 0);
   document.getElementById('total-pts').textContent          = grandPts.toLocaleString();
   document.getElementById('total-reps').textContent         = grandReps.toLocaleString();
   document.getElementById('total-participants').textContent = entries.length;
-
+ 
   const container = document.getElementById('leaderboard');
   if (!entries.length) {
     container.innerHTML = '<div class="empty">No reps logged yet — be the first!</div>';
     return;
   }
-
+ 
   const max = entries[0].score || 1;
   const rankClasses = ['gold', 'silver', 'bronze'];
-
+ 
   container.innerHTML = entries.map(({ name, exData, score, reps }, i) => {
     const pct       = Math.round((score / max) * 100);
     const rankClass = i < 3 ? rankClasses[i] : '';
@@ -205,31 +218,32 @@ function renderLeaderboard() {
         <div class="bar-wrap"><div class="bar" style="width:${pct}%"></div></div>
         <div class="score-col">
           <span class="score-pts">${score.toLocaleString()} pts</span>
-          <span class="score-reps">${reps} reps</span>
+          <span class="score-reps">${totalRepsFor(exData)}</span>
         </div>
       </div>`;
   }).join('');
 }
-
+ 
 function showToast(id, msg, type) {
   const el = document.getElementById(id);
   el.textContent = msg;
   el.className = 'toast ' + type;
   setTimeout(() => { el.className = 'toast'; }, 3500);
 }
-
+ 
 function logReps() {
   const name = document.getElementById('input-name').value.trim();
   if (!name) return showToast('toast', 'Enter your name.', 'error');
-
+ 
   const logged = {};
   let anyReps = false;
   for (const ex of EXERCISES) {
-    const val = parseInt(document.getElementById(`ex-${ex.id}`).value) || 0;
+    const raw = document.getElementById(`ex-${ex.id}`).value;
+    const val = ex.id === 'km' ? parseFloat(raw) || 0 : parseInt(raw) || 0;
     if (val > 0) { logged[ex.id] = val; anyReps = true; }
   }
   if (!anyReps) return showToast('toast', 'Enter at least one rep count.', 'error');
-
+ 
   const data = getData();
   if (!data[name]) data[name] = {};
   let pointsEarned = 0;
@@ -242,25 +256,25 @@ function logReps() {
   saveData(data);
   renderLeaderboard();
   EXERCISES.forEach(ex => { document.getElementById(`ex-${ex.id}`).value = ''; });
-  const summary = EXERCISES.filter(ex => logged[ex.id]).map(ex => `${logged[ex.id]} ${ex.label}`).join(', ');
+  const summary = EXERCISES.filter(ex => logged[ex.id]).map(ex => ex.id === 'km' ? `${logged[ex.id]}km` : `${logged[ex.id]} ${ex.label}`).join(', ');
   showToast('toast', `+${pointsEarned} pts for ${name} — ${summary}`, 'success');
 }
-
+ 
 function saveWebhook() {
   const url = document.getElementById('slack-webhook').value.trim();
   if (!url.startsWith('https://hooks.slack.com/')) return showToast('slack-toast', "Doesn't look like a valid Slack webhook URL.", 'error');
   localStorage.setItem(WEBHOOK_KEY, url);
   showToast('slack-toast', 'Webhook saved!', 'success');
 }
-
+ 
 function buildLeaderboardMessage() {
   const data = getData();
   const entries = Object.entries(data)
     .map(([name, exData]) => ({ name, exData, score: scoreFor(exData), reps: totalRepsFor(exData) }))
     .sort((a, b) => b.score - a.score);
-
+ 
   if (!entries.length) return '*No reps logged yet!*';
-
+ 
   const medals = ['🥇', '🥈', '🥉'];
   const lines = entries.map(({ name, exData, score, reps }, i) => {
     const prefix    = i < 3 ? medals[i] : `${i + 1}.`;
@@ -268,18 +282,18 @@ function buildLeaderboardMessage() {
       .map(ex => `${ex.emoji} ${exData[ex.id]}`).join(' ');
     return `${prefix} *${name}* — ${score.toLocaleString()} pts  _(${reps} reps: ${breakdown})_`;
   });
-
+ 
   const grandPts = entries.reduce((s, e) => s + e.score, 0);
   return [
     '🔥 *Ground Fitness Challenge — Daily Leaderboard*',
     '',
     lines.join('\n'),
     '',
-    '_Scoring: 💪 Push-ups 1pt · 🔥 Sit-ups 1pt · 🦵 Squats 2pts · ⚡ Burpees 3pts_',
+    '_Scoring: 💪 Push-ups 1pt · 🔥 Sit-ups 1pt · 🦵 Squats 2pts · ⚡ Burpees 3pts · 🏃 Run/Walk 5pts/km_',
     `_Total points: ${grandPts.toLocaleString()}_`
   ].join('\n');
 }
-
+ 
 async function postToSlack(text) {
   const webhookUrl = localStorage.getItem(WEBHOOK_KEY);
   if (!webhookUrl) { showToast('slack-toast', 'No webhook saved yet.', 'error'); return false; }
@@ -292,17 +306,17 @@ async function postToSlack(text) {
     return res.ok;
   } catch { return false; }
 }
-
+ 
 async function testSlack() {
   const ok = await postToSlack('👋 Test from the Ground Fitness Challenge app — Slack is connected!');
   showToast('slack-toast', ok ? 'Test message sent!' : 'Failed. Check your webhook URL.', ok ? 'success' : 'error');
 }
-
+ 
 async function postLeaderboard() {
   const ok = await postToSlack(buildLeaderboardMessage());
   showToast('slack-toast', ok ? 'Leaderboard posted to Slack!' : 'Failed. Check your webhook URL.', ok ? 'success' : 'error');
 }
-
+ 
 function scheduleDaily() {
   function msUntil8amEST() {
     const now = new Date();
@@ -317,7 +331,7 @@ function scheduleDaily() {
   }
   schedule();
 }
-
+ 
 window.addEventListener('DOMContentLoaded', () => {
   const saved = localStorage.getItem(WEBHOOK_KEY);
   if (saved) document.getElementById('slack-webhook').value = saved;
