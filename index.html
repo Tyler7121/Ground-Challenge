@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ground Fitness Challenge</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f3; color: #1a1a1a; min-height: 100vh; }
+  .header { background: #1a1a1a; color: #fff; padding: 1.5rem 2rem; display: flex; align-items: center; gap: 12px; }
+  .header h1 { font-size: 20px; font-weight: 500; letter-spacing: -0.3px; }
+  .container { max-width: 660px; margin: 0 auto; padding: 2rem 1.5rem; }
+  .stats-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 1.25rem; }
+  .stat-card { background: #fff; border-radius: 10px; border: 0.5px solid rgba(0,0,0,0.1); padding: 1rem; }
+  .stat-label { font-size: 11px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .stat-value { font-size: 22px; font-weight: 500; color: #1a1a1a; }
+  .card { background: #fff; border-radius: 12px; border: 0.5px solid rgba(0,0,0,0.1); padding: 1.5rem; margin-bottom: 1.25rem; }
+  .card h2 { font-size: 12px; font-weight: 500; color: #aaa; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 1rem; }
+  .form-name { margin-bottom: 10px; }
+  input[type="text"], input[type="number"] {
+    width: 100%; padding: 10px 12px; border: 0.5px solid rgba(0,0,0,0.18); border-radius: 8px;
+    font-size: 15px; font-family: inherit; background: #fff; color: #1a1a1a; outline: none;
+  }
+  input:focus { border-color: rgba(0,0,0,0.45); }
+  .exercises-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .exercise-input .label-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .exercise-input label { font-size: 12px; color: #888; }
+  .point-badge { font-size: 11px; font-weight: 500; padding: 2px 7px; border-radius: 20px; }
+  .pts-1 { background: #f0ede6; color: #888; }
+  .pts-2 { background: #e1f5ee; color: #0f6e56; }
+  .pts-3 { background: #faeeda; color: #854f0b; }
+  button.primary {
+    width: 100%; padding: 11px; background: #1a1a1a; color: #fff; border: none; border-radius: 8px;
+    font-size: 15px; font-weight: 500; font-family: inherit; cursor: pointer; transition: opacity 0.15s;
+  }
+  button.primary:hover { opacity: 0.85; }
+  button.secondary {
+    width: 100%; padding: 10px; background: transparent; color: #1a1a1a; border: 0.5px solid rgba(0,0,0,0.22); border-radius: 8px;
+    font-size: 14px; font-family: inherit; cursor: pointer; transition: background 0.15s; margin-top: 8px;
+  }
+  button.secondary:hover { background: #f5f5f3; }
+  .toast { display: none; margin-top: 10px; padding: 10px 12px; border-radius: 8px; font-size: 14px; }
+  .toast.success { background: #eaf3de; color: #3b6d11; display: block; }
+  .toast.error { background: #fcebeb; color: #a32d2d; display: block; }
+  .leaderboard-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 0.5px solid rgba(0,0,0,0.07); }
+  .leaderboard-row:last-child { border-bottom: none; }
+  .rank { font-size: 13px; color: #bbb; width: 22px; text-align: center; flex-shrink: 0; }
+  .rank.gold { color: #ba7517; font-weight: 600; }
+  .rank.silver { color: #888; font-weight: 600; }
+  .rank.bronze { color: #993c1d; font-weight: 600; }
+  .avatar { width: 34px; height: 34px; border-radius: 50%; background: #ece9e0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; color: #666; flex-shrink: 0; }
+  .person-info { flex: 1; min-width: 0; }
+  .person-name { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .person-breakdown { font-size: 11px; color: #aaa; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-wrap { width: 80px; height: 5px; background: #f0ede6; border-radius: 4px; overflow: hidden; flex-shrink: 0; }
+  .bar { height: 100%; background: #1a1a1a; border-radius: 4px; transition: width 0.4s ease; }
+  .score-col { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; min-width: 52px; }
+  .score-pts { font-size: 15px; font-weight: 500; }
+  .score-reps { font-size: 11px; color: #bbb; }
+  .empty { text-align: center; color: #bbb; font-size: 14px; padding: 1.5rem 0; }
+  .slack-section label { font-size: 14px; color: #555; display: block; margin-bottom: 6px; }
+  .slack-section input { margin-bottom: 10px; }
+  .hint { font-size: 12px; color: #bbb; margin-top: 4px; line-height: 1.5; }
+  .schedule-info { font-size: 13px; color: #666; background: #f5f5f3; border-radius: 8px; padding: 10px 12px; margin-top: 10px; }
+  .schedule-info strong { color: #1a1a1a; }
+  .scoring-legend { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1rem; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #666; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span style="font-size:22px">🔥</span>
+  <h1>Ground Fitness Challenge</h1>
+</div>
+
+<div class="container">
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Total points</div>
+      <div class="stat-value" id="total-pts">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total reps</div>
+      <div class="stat-value" id="total-reps">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Participants</div>
+      <div class="stat-value" id="total-participants">0</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Log your reps</h2>
+    <div class="scoring-legend">
+      <div class="legend-item"><span class="point-badge pts-1">1 pt</span> Push-ups &amp; Sit-ups</div>
+      <div class="legend-item"><span class="point-badge pts-2">2 pts</span> Squats</div>
+      <div class="legend-item"><span class="point-badge pts-3">3 pts</span> Burpees</div>
+    </div>
+    <div class="form-name">
+      <input type="text" id="input-name" placeholder="Your name" autocomplete="off" />
+    </div>
+    <div class="exercises-grid">
+      <div class="exercise-input">
+        <div class="label-row"><label>Push-ups</label><span class="point-badge pts-1">1 pt</span></div>
+        <input type="number" id="ex-pushups" placeholder="0" min="0" max="9999" />
+      </div>
+      <div class="exercise-input">
+        <div class="label-row"><label>Sit-ups</label><span class="point-badge pts-1">1 pt</span></div>
+        <input type="number" id="ex-situps" placeholder="0" min="0" max="9999" />
+      </div>
+      <div class="exercise-input">
+        <div class="label-row"><label>Body squats</label><span class="point-badge pts-2">2 pts</span></div>
+        <input type="number" id="ex-squats" placeholder="0" min="0" max="9999" />
+      </div>
+      <div class="exercise-input">
+        <div class="label-row"><label>Burpees</label><span class="point-badge pts-3">3 pts</span></div>
+        <input type="number" id="ex-burpees" placeholder="0" min="0" max="9999" />
+      </div>
+    </div>
+    <button class="primary" onclick="logReps()">Log reps</button>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <div class="card">
+    <h2>Leaderboard — points</h2>
+    <div id="leaderboard"><div class="empty">No reps logged yet — be the first!</div></div>
+  </div>
+
+  <div class="card slack-section">
+    <h2>Slack setup</h2>
+    <label>Webhook URL</label>
+    <input type="text" id="slack-webhook" placeholder="https://hooks.slack.com/services/..." />
+    <p class="hint">Get this from your Slack app's Incoming Webhooks page. Saved in your browser only.</p>
+    <button class="primary" onclick="saveWebhook()">Save webhook</button>
+    <button class="secondary" onclick="testSlack()">Send test message</button>
+    <button class="secondary" onclick="postLeaderboard()">Post leaderboard now</button>
+    <div class="toast" id="slack-toast"></div>
+    <div class="schedule-info">Daily leaderboard posts automatically at <strong>8:00 AM EST</strong> while this tab is open.</div>
+  </div>
+
+</div>
+
+<script>
+const STORAGE_KEY = 'ground_challenge_v3';
+const WEBHOOK_KEY = 'ground_webhook_v1';
+const EXERCISES = [
+  { id: 'pushups', label: 'Push-ups',    emoji: '💪', pts: 1 },
+  { id: 'situps',  label: 'Sit-ups',     emoji: '🔥', pts: 1 },
+  { id: 'squats',  label: 'Body squats', emoji: '🦵', pts: 2 },
+  { id: 'burpees', label: 'Burpees',     emoji: '⚡', pts: 3 },
+];
+
+function getData() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; }
+}
+function saveData(d) { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
+function getInitials(name) {
+  return name.trim().split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+}
+function scoreFor(exData) {
+  return EXERCISES.reduce((s, ex) => s + (exData[ex.id] || 0) * ex.pts, 0);
+}
+function totalRepsFor(exData) {
+  return EXERCISES.reduce((s, ex) => s + (exData[ex.id] || 0), 0);
+}
+
+function renderLeaderboard() {
+  const data = getData();
+  const entries = Object.entries(data)
+    .map(([name, exData]) => ({ name, exData, score: scoreFor(exData), reps: totalRepsFor(exData) }))
+    .sort((a, b) => b.score - a.score);
+
+  const grandPts  = entries.reduce((s, e) => s + e.score, 0);
+  const grandReps = entries.reduce((s, e) => s + e.reps,  0);
+  document.getElementById('total-pts').textContent          = grandPts.toLocaleString();
+  document.getElementById('total-reps').textContent         = grandReps.toLocaleString();
+  document.getElementById('total-participants').textContent = entries.length;
+
+  const container = document.getElementById('leaderboard');
+  if (!entries.length) {
+    container.innerHTML = '<div class="empty">No reps logged yet — be the first!</div>';
+    return;
+  }
+
+  const max = entries[0].score || 1;
+  const rankClasses = ['gold', 'silver', 'bronze'];
+
+  container.innerHTML = entries.map(({ name, exData, score, reps }, i) => {
+    const pct       = Math.round((score / max) * 100);
+    const rankClass = i < 3 ? rankClasses[i] : '';
+    const breakdown = EXERCISES
+      .filter(ex => exData[ex.id] > 0)
+      .map(ex => `${ex.emoji} ${exData[ex.id]}`)
+      .join(' · ');
+    return `
+      <div class="leaderboard-row">
+        <span class="rank ${rankClass}">${i + 1}</span>
+        <div class="avatar">${getInitials(name)}</div>
+        <div class="person-info">
+          <div class="person-name">${name}</div>
+          <div class="person-breakdown">${breakdown || '—'}</div>
+        </div>
+        <div class="bar-wrap"><div class="bar" style="width:${pct}%"></div></div>
+        <div class="score-col">
+          <span class="score-pts">${score.toLocaleString()} pts</span>
+          <span class="score-reps">${reps} reps</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function showToast(id, msg, type) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'toast ' + type;
+  setTimeout(() => { el.className = 'toast'; }, 3500);
+}
+
+function logReps() {
+  const name = document.getElementById('input-name').value.trim();
+  if (!name) return showToast('toast', 'Enter your name.', 'error');
+
+  const logged = {};
+  let anyReps = false;
+  for (const ex of EXERCISES) {
+    const val = parseInt(document.getElementById(`ex-${ex.id}`).value) || 0;
+    if (val > 0) { logged[ex.id] = val; anyReps = true; }
+  }
+  if (!anyReps) return showToast('toast', 'Enter at least one rep count.', 'error');
+
+  const data = getData();
+  if (!data[name]) data[name] = {};
+  let pointsEarned = 0;
+  for (const ex of EXERCISES) {
+    if (logged[ex.id]) {
+      data[name][ex.id] = (data[name][ex.id] || 0) + logged[ex.id];
+      pointsEarned += logged[ex.id] * ex.pts;
+    }
+  }
+  saveData(data);
+  renderLeaderboard();
+  EXERCISES.forEach(ex => { document.getElementById(`ex-${ex.id}`).value = ''; });
+  const summary = EXERCISES.filter(ex => logged[ex.id]).map(ex => `${logged[ex.id]} ${ex.label}`).join(', ');
+  showToast('toast', `+${pointsEarned} pts for ${name} — ${summary}`, 'success');
+}
+
+function saveWebhook() {
+  const url = document.getElementById('slack-webhook').value.trim();
+  if (!url.startsWith('https://hooks.slack.com/')) return showToast('slack-toast', "Doesn't look like a valid Slack webhook URL.", 'error');
+  localStorage.setItem(WEBHOOK_KEY, url);
+  showToast('slack-toast', 'Webhook saved!', 'success');
+}
+
+function buildLeaderboardMessage() {
+  const data = getData();
+  const entries = Object.entries(data)
+    .map(([name, exData]) => ({ name, exData, score: scoreFor(exData), reps: totalRepsFor(exData) }))
+    .sort((a, b) => b.score - a.score);
+
+  if (!entries.length) return '*No reps logged yet!*';
+
+  const medals = ['🥇', '🥈', '🥉'];
+  const lines = entries.map(({ name, exData, score, reps }, i) => {
+    const prefix    = i < 3 ? medals[i] : `${i + 1}.`;
+    const breakdown = EXERCISES.filter(ex => exData[ex.id] > 0)
+      .map(ex => `${ex.emoji} ${exData[ex.id]}`).join(' ');
+    return `${prefix} *${name}* — ${score.toLocaleString()} pts  _(${reps} reps: ${breakdown})_`;
+  });
+
+  const grandPts = entries.reduce((s, e) => s + e.score, 0);
+  return [
+    '🔥 *Ground Fitness Challenge — Daily Leaderboard*',
+    '',
+    lines.join('\n'),
+    '',
+    '_Scoring: 💪 Push-ups 1pt · 🔥 Sit-ups 1pt · 🦵 Squats 2pts · ⚡ Burpees 3pts_',
+    `_Total points: ${grandPts.toLocaleString()}_`
+  ].join('\n');
+}
+
+async function postToSlack(text) {
+  const webhookUrl = localStorage.getItem(WEBHOOK_KEY);
+  if (!webhookUrl) { showToast('slack-toast', 'No webhook saved yet.', 'error'); return false; }
+  try {
+    const res = await fetch('/.netlify/functions/slack', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ webhookUrl, text })
+    });
+    return res.ok;
+  } catch { return false; }
+}
+
+async function testSlack() {
+  const ok = await postToSlack('👋 Test from the Ground Fitness Challenge app — Slack is connected!');
+  showToast('slack-toast', ok ? 'Test message sent!' : 'Failed. Check your webhook URL.', ok ? 'success' : 'error');
+}
+
+async function postLeaderboard() {
+  const ok = await postToSlack(buildLeaderboardMessage());
+  showToast('slack-toast', ok ? 'Leaderboard posted to Slack!' : 'Failed. Check your webhook URL.', ok ? 'success' : 'error');
+}
+
+function scheduleDaily() {
+  function msUntil8amEST() {
+    const now = new Date();
+    const est = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const next = new Date(est);
+    next.setHours(8, 0, 0, 0);
+    if (next <= est) next.setDate(next.getDate() + 1);
+    return next - est;
+  }
+  function schedule() {
+    setTimeout(async () => { await postLeaderboard(); schedule(); }, msUntil8amEST());
+  }
+  schedule();
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem(WEBHOOK_KEY);
+  if (saved) document.getElementById('slack-webhook').value = saved;
+  renderLeaderboard();
+  scheduleDaily();
+  document.getElementById('input-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('ex-pushups').focus();
+  });
+});
+</script>
+</body>
+</html>
